@@ -25,19 +25,20 @@ Finally, the chord denotation system uses a shorthand for pitch relationships wh
 
 In the REPL: 
 
-await (async () => {
-  const res = await fetch('https://github.com/morgen-d/strudel-shasavistic/main/strudel-shasavistic-helper.js');
-  const blob = await res.blob();
-  const objURL = URL.createObjectURL(blob);
-  const script = document.createElement('script');
-  script.src = objURL;
+await (async () => { const res = await fetch('https://raw.githubusercontent.com/morgen-d/strudel-shasavistic/main/strudel-shasavistic-helper.js'); 
+  const blob = await res.blob(); 
+  const objURL = URL.createObjectURL(blob); 
+  const script = document.createElement('script'); 
+  script.src = objURL; 
   document.head.appendChild(script);
-
-  while (typeof shasavFreqValue === 'undefined') {
-    await new Promise(r => setTimeout(r, 100));
-  }
-
-  console.log('shasavFreqValue is now available');
+  
+  while (typeof shasavFreqValue === 'undefined') { await new Promise(r => setTimeout(r, 100)); }
+  
+  console.log('shasavFreqValue is now available'); })();
+  
+  console.log(...shasavChordFreqArray("AhChyScy", 100))
+  freq(...shasavChordFreqArray("AhChyScy", 100))
+    console.log('shasavFreqValue is now available');
 })();
 
 freq(...shasavChordFreqArray("AhChyScy", 100)).s("piano")
