@@ -20,7 +20,9 @@ Capital letters denote new pitches. AhChyScy with f = 100 is [100, 150, 112.5] f
 For inversions, a slash is written. Inversions make the inverted note the lowest through use of octaves just like in traditional music theory. Scy/AhChyScy is then [100, 150, 56.25].
 
 Finally, the chord denotation system uses a shorthand for pitch relationships which allows transposition of chords. This is indicated by a hyphen ‘-’. An example: Chy-AhChyLy actually temporarily turns ‘Chy’ into the fundamental frequency and does pitch calculations based on this -- if f still is 100hz, temporarily f=150 (Chy) and an AhChyLy chord is calculated which evaluates to [150, 225, 187.5]. Note how this temporarily also breaks the bounding octave rule, because our new accepted range is (150/2 <= u <= 150*2). 
+
 ------------------Implementation in Strudel-----------------------
+
 In the REPL: 
 await (async () => {
   const res = await fetch('[https://github.com/.js](https://github.com/morgen-d/strudel-shasavistic/main/strudel-shasavistic-helper.js)');
