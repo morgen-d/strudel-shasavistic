@@ -138,22 +138,21 @@
     } catch(e){}
   }
 
-  function _makeCommaStringFromArray(rawArray, fallbackBase) {
-    const nums = (Array.isArray(rawArray) ? rawArray.slice() : []).map(v => Number(v));
-    const badIdx = nums.map((n,i) => (!Number.isFinite(n) || n <= 0) ? i : -1).filter(i=>i>=0);
-    if (badIdx.length) {
-      console.warn('shasav: non-finite/non-positive freqs at indices', badIdx, '-> replacing with base', fallbackBase);
-    }
-    const safe = nums.map(n => {
-      const ok = Number.isFinite(n) && n > 0;
-      const val = ok ? n : Number(fallbackBase);
-      // clamp range to avoid WebAudio param errors
-      return Math.min(Math.max(val, 0.0001), 20000);
-    });
-    // keep reasonable precision but drop trailing zeros
-    const formatted = safe.map(n => parseFloat(n.toFixed(6)));
-    return formatted.join(', ');
+function _makeSpaceStringFromArray(rawArray, fallbackBase) {
+  const nums = (Array.isArray(rawArray) ? rawArray.slice() : []).map(v => Number(v));
+  const badIdx = nums.map((n,i) => (!Number.isFinite(n) || n <= 0) ? i : -1).filter(i=>i>=0);
+  if (badIdx.length) {
+    console.warn('shasav: non-finite/non-positive freqs at indices', badIdx, '-> replacing with base', fallbackBase);
   }
+  const safe = nums.map(n => {
+    const ok = Number.isFinite(n) && n > 0;
+    const val = ok ? n : Number(fallbackBase);
+    return Math.min(Math.max(val, 0.0001), 20000);
+  });
+  const formatted = safe.map(n => parseFloat(n.toFixed(6)));
+  return formatted.join(' ');
+}
+
 
   // Play a chord as simultaneous voices (comma-separated string)
   function playShasavChord(chordName, baseFreq = 200, synth = 'sine') {
@@ -163,7 +162,7 @@
     }
     const raw = shasavChordFreqArray(chordName, baseFreq);
     console.log('shasav raw ->', raw);
-    const freqArgString = _makeCommaStringFromArray(raw, baseFreq);
+    const freqArgString = _makeSpaceStringFromArray(raw, baseFreq);
     console.log('shasav: calling freq() with ->', '"' + freqArgString + '"');
     _resumeAnyAudioContexts();
     try {
