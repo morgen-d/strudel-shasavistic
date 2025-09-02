@@ -25,7 +25,7 @@ Finally, the chord denotation system uses a shorthand for pitch relationships wh
 
 In the REPL: 
 await (async () => {
-  const res = await fetch('[https://github.com/.js](https://github.com/morgen-d/strudel-shasavistic/main/strudel-shasavistic-helper.js)');
+  const res = await fetch('https://github.com/morgen-d/strudel-shasavistic/main/strudel-shasavistic-helper.js');
   const blob = await res.blob();
   const objURL = URL.createObjectURL(blob);
   const script = document.createElement('script');
