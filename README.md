@@ -4,6 +4,7 @@ Translates the Shasavistic system of music theory (by LΛMPLIGHT) into functions
 Explanation in video: www.youtube.com/playlist?list=PLUPfWiftqUrIy3dMXdcpaYpGt6vZAeW5a
 
 ------------------Explanation of the System------------------------
+
 This is a simple, but a relatively new, system that ends up being microtonal.
 Going from lowest to highest frequency relationship from the root note, second-dimension syllabaries are ju (f/3/3/3) schu (f/3/3) fu (f/3) ah (f) chy (f*3) scy (f*3*3) xcy (f*3*3*3).
 Third-dimension syllabaries are sru (f/5/5) su (f/5) ah (f) ly (f*5) dry (f*5*5). Fourth-dimension syllabaries are pru (f/7/7) pu (f/7) ah (f) my (f*7) mry (f*7*7). Fifth dimension syllabaries are kru (f/11/11) tschu (f/11) ah (f) zy (f*11) zry (f*11*11).
