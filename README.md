@@ -24,6 +24,7 @@ Finally, the chord denotation system uses a shorthand for pitch relationships wh
 ------------------Implementation in Strudel-----------------------
 
 In the REPL: 
+
 await (async () => {
   const res = await fetch('https://github.com/morgen-d/strudel-shasavistic/main/strudel-shasavistic-helper.js');
   const blob = await res.blob();
