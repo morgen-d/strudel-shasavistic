@@ -1,8 +1,6 @@
 (function(){
-  // safe global reference
   const G = (typeof globalThis !== 'undefined') ? globalThis : (typeof window !== 'undefined') ? window : this;
 
-  // core maps
   const SYLL_MAP = {
     'ju': {r: 1/27, dim:2}, 'schu': {r:1/9, dim:2}, 'fu':{r:1/3, dim:2},
     'ah': {r:1, dim:2}, 'chy':{r:3, dim:2}, 'scy':{r:9, dim:2}, 'xcy':{r:27, dim:2},
@@ -13,7 +11,6 @@
   const SHORT_MAP = { 's': {r:1/5, dim:3}, 'k': {r:1/11, dim:5} };
   const ALL_KEYS = Object.keys(SYLL_MAP).concat(Object.keys(SHORT_MAP)).sort((a,b)=>b.length-a.length);
 
-  // normalize tokens to lowercase; small 'tsch' -> 'k' substitution except before vowels
   function normalizeToken(tok){
     if(typeof tok !== 'string') tok = String(tok);
     let s = tok.trim();
@@ -38,10 +35,8 @@
         }
       }
       if(!matched){
-        // allow a trailing single 'u' as benign
         if(remaining === 'u'){ remaining = ''; break; }
-        // drop one char and continue (permissive salvage for slightly-misspelled inputs)
-        remaining = remaining.slice(1);
+        remaining = remaining.slice(1); // permissive salvage
       }
     }
     return {factor, maxDim};
@@ -52,7 +47,6 @@
     if(dim === 5){ lower = baseFreq/8; upper = baseFreq*8; }
     else if(dim === 4){ lower = baseFreq/4; upper = baseFreq*4; }
     else { lower = baseFreq/2; upper = baseFreq*2; }
-    // bring into octave range near base
     while(freq > upper) freq /= 2;
     while(freq < lower) freq *= 2;
     return freq;
@@ -66,19 +60,22 @@
     return freq;
   }
 
-  // more permissive tokenizer: matches a letter followed by alphanumerics
   function splitChordTokens(chordStr){
     chordStr = String(chordStr || '').trim();
-    const tokens = chordStr.match(/[A-Za-z][a-z0-9]*/g) || [];
+    const tokens = chordStr.match(/[A-Z][a-z0-9]*/g) || [];
     return tokens;
   }
 
-  function shasavChordFreqArray(chordName, baseFreq){
+  function shasavChordFreqArray(chordName, baseFreq, options){
+    // options can be:
+    //  - undefined / false : returns numeric array (backwards compatible)
+    //  - true              : returns comma-separated string
+    //  - 'string'|'args'   : returns comma-separated string
+    //  - 'array'           : returns numeric array
     baseFreq = (typeof baseFreq === 'number' && !isNaN(baseFreq)) ? baseFreq : 100;
     let chordStr = String(chordName);
     let localBase = baseFreq;
 
-    // transposition 'root-chord'
     if(chordStr.indexOf('-') !== -1){
       const parts = chordStr.split('-',2);
       const transRoot = parts[0];
@@ -86,7 +83,6 @@
       localBase = shasavFreqValue(transRoot, baseFreq);
     }
 
-    // inversion 'inv/chord'
     let inversion = null;
     if(chordStr.indexOf('/') !== -1){
       const parts = chordStr.split('/',2);
@@ -112,10 +108,23 @@
       }
     }
 
-    // normalize numeric precision
-    return freqs.map(v => +v.toFixed(6));
+    // numeric rounding kept as before
+    freqs = freqs.map(v => +v.toFixed(6));
+
+    // interpret options
+    if(options === true || options === 'string' || options === 'args'){
+      // return a comma-separated string suitable for pasting: "200, 300, 133.333334"
+      return freqs.join(', ');
+    }
+    // default: return numeric array
+    return freqs;
   }
 
+  // convenience helper that always returns the string form
+  function shasavChordFreqArgs(chordName, baseFreq){
+    return shasavChordFreqArray(chordName, baseFreq, 'args');
+  }
+  
   function freqToMidiDecimal(freq){
     return 69 + 12 * Math.log2(freq/440);
   }
@@ -124,99 +133,11 @@
     return arr.map(f => +freqToMidiDecimal(f).toFixed(6));
   }
 
-  function _resumeAnyAudioContexts() {
-    // iterate window and resume any suspended contexts (best-effort)
-    try {
-      for (const k of Object.keys(window)) {
-        try {
-          const v = window[k];
-          if (v && typeof v.resume === 'function' && v.state === 'suspended') {
-            v.resume().then(()=>console.log('resumed audio context:', k)).catch(()=>{});
-          }
-        } catch(e){}
-      }
-    } catch(e){}
-  }
-
-function _makeSpaceStringFromArray(rawArray, fallbackBase) {
-  const nums = (Array.isArray(rawArray) ? rawArray.slice() : []).map(v => Number(v));
-  const badIdx = nums.map((n,i) => (!Number.isFinite(n) || n <= 0) ? i : -1).filter(i=>i>=0);
-  if (badIdx.length) {
-    console.warn('shasav: non-finite/non-positive freqs at indices', badIdx, '-> replacing with base', fallbackBase);
-  }
-  const safe = nums.map(n => {
-    const ok = Number.isFinite(n) && n > 0;
-    const val = ok ? n : Number(fallbackBase);
-    return Math.min(Math.max(val, 0.0001), 20000);
-  });
-  const formatted = safe.map(n => parseFloat(n.toFixed(6)));
-  return formatted.join(' ');
-}
-
-
-  // Play a chord as simultaneous voices (comma-separated string)
-  function playShasavChord(chordName, baseFreq = 200, synth = 'sine') {
-  const raw = (typeof shasavChordFreqArray === 'function') ? shasavChordFreqArray(chordName, baseFreq) : [];
-  // sanitize numbers
-  let safe = raw.map((v, i) => {
-    const n = Number(v);
-    return (Number.isFinite(n) && n > 0 && n < 20000) ? +n.toFixed(6) : +baseFreq;
-  });
-
-  // if duplicates exist, add tiny jitter to avoid internal divide-by-zero issues
-  const seen = new Map();
-  const EPS = 1e-6;
-  safe = safe.map((v, idx) => {
-    if (!seen.has(v)) { seen.set(v, 1); return v; }
-    // value already seen -> nudge by a tiny increasing EPS
-    const count = seen.get(v) + 1;
-    seen.set(v, count);
-    return +(v + (EPS * count)).toFixed(6);
-  });
-
-  // final check: filter out any non-finite or zero entries and clamp
-  safe = safe.map(n => {
-    if (!Number.isFinite(n) || n <= 0) return +baseFreq;
-    return Math.min(Math.max(n, 0.0001), 20000);
-  });
-
-  const arg = safe.join(' ');
-  console.log('[shasav][safePlay] freq string ->', arg, 'orig ->', raw);
-  // force sane gain and cutoff patterns to avoid missing/chained-parameter NaNs
-  const node = (typeof freq === 'function') ? freq(arg).s(synth) : null;
-  try {
-    if (node && typeof node.gain === 'function') node.gain('0.8 0.8'); // makes sure gain exists
-  } catch (e) { /* ignore if not supported */ }
-  try {
-    if (node && typeof node.cutoff === 'function') node.cutoff('2000 2000');
-  } catch (e) { /* ignore */ }
-  return node;
-  }
-
-  const arg = safe.join(' ');
-  console.log('[shasav][safePlay] freq string ->', arg, 'orig ->', raw);
-  // force sane gain and cutoff patterns to avoid missing/chained-parameter NaNs
-  const node = (typeof freq === 'function') ? freq(arg).s(synth) : null;
-  try {
-    if (node && typeof node.gain === 'function') node.gain('0.8 0.8'); // makes sure gain exists
-  } catch (e) { /* ignore if not supported */ }
-  try {
-    if (node && typeof node.cutoff === 'function') node.cutoff('2000 2000');
-  } catch (e) { /* ignore */ }
-  return node;
-}
-
-  // Expose the API under a single namespace to avoid global pollution
-  G.shasav = G.shasav || {};
-  G.shasav.shasavFreqValue = shasavFreqValue;
-  G.shasav.shasavChordFreqArray = shasavChordFreqArray;
-  G.shasav.shasavChordMidiArray = shasavChordMidiArray;
-  G.shasav.playShasavChord = playShasavChord;
-  // convenience top-level aliases too:
+  // Expose to global scope for REPL usage
   G.shasavFreqValue = shasavFreqValue;
   G.shasavChordFreqArray = shasavChordFreqArray;
+  G.shasavChordFreqArgs = shasavChordFreqArgs;
   G.shasavChordMidiArray = shasavChordMidiArray;
-  G.playShasavChord = playShasavChord;
 
-  //# sourceURL=strudel-shasavistic-helper.js
+  return (typeof silence !== 'undefined') ? silence : (typeof mini !== 'undefined' ? mini() : undefined);
 })();
