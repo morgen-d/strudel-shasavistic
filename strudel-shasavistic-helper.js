@@ -174,12 +174,52 @@ function _makeSpaceStringFromArray(rawArray, fallbackBase) {
     }
   }
 
+  // paste this into your page (replace your playShasavChord call, or call this in REPL)
+function safePlayShasavChord(chordName, baseFreq = 200, synth = 'sine') {
+  const raw = (typeof shasavChordFreqArray === 'function') ? shasavChordFreqArray(chordName, baseFreq) : [];
+  // sanitize numbers
+  let safe = raw.map((v, i) => {
+    const n = Number(v);
+    return (Number.isFinite(n) && n > 0 && n < 20000) ? +n.toFixed(6) : +baseFreq;
+  });
+
+  // if duplicates exist, add tiny jitter to avoid internal divide-by-zero issues
+  const seen = new Map();
+  const EPS = 1e-6;
+  safe = safe.map((v, idx) => {
+    if (!seen.has(v)) { seen.set(v, 1); return v; }
+    // value already seen -> nudge by a tiny increasing EPS
+    const count = seen.get(v) + 1;
+    seen.set(v, count);
+    return +(v + (EPS * count)).toFixed(6);
+  });
+
+  // final check: filter out any non-finite or zero entries and clamp
+  safe = safe.map(n => {
+    if (!Number.isFinite(n) || n <= 0) return +baseFreq;
+    return Math.min(Math.max(n, 0.0001), 20000);
+  });
+
+  const arg = safe.join(' ');
+  console.log('[shasav][safePlay] freq string ->', arg, 'orig ->', raw);
+  // force sane gain and cutoff patterns to avoid missing/chained-parameter NaNs
+  const node = (typeof freq === 'function') ? freq(arg).s(synth) : null;
+  try {
+    if (node && typeof node.gain === 'function') node.gain('0.8 0.8'); // makes sure gain exists
+  } catch (e) { /* ignore if not supported */ }
+  try {
+    if (node && typeof node.cutoff === 'function') node.cutoff('2000 2000');
+  } catch (e) { /* ignore */ }
+  return node;
+}
+
   // Expose the API under a single namespace to avoid global pollution
   G.shasav = G.shasav || {};
   G.shasav.shasavFreqValue = shasavFreqValue;
   G.shasav.shasavChordFreqArray = shasavChordFreqArray;
   G.shasav.shasavChordMidiArray = shasavChordMidiArray;
   G.shasav.playShasavChord = playShasavChord;
+  G.shasav.safePlayShasavChord = safePlayShasavChord
   // convenience top-level aliases too:
   G.shasavFreqValue = shasavFreqValue;
   G.shasavChordFreqArray = shasavChordFreqArray;
