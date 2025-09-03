@@ -156,26 +156,6 @@ function _makeSpaceStringFromArray(rawArray, fallbackBase) {
 
   // Play a chord as simultaneous voices (comma-separated string)
   function playShasavChord(chordName, baseFreq = 200, synth = 'sine') {
-    if (typeof shasavChordFreqArray !== 'function') {
-      console.error('shasav helper not present: shasavChordFreqArray undefined');
-      return null;
-    }
-    const raw = shasavChordFreqArray(chordName, baseFreq);
-    console.log('shasav raw ->', raw);
-    const freqArgString = _makeSpaceStringFromArray(raw, baseFreq);
-    console.log('shasav: calling freq() with ->', '"' + freqArgString + '"');
-    _resumeAnyAudioContexts();
-    try {
-      // call freq with a single string argument containing comma-sep pitches
-      return typeof freq === 'function' ? freq(freqArgString).s(synth) : null;
-    } catch (err) {
-      console.error('shasav: freq() call threw:', err);
-      return null;
-    }
-  }
-
-  // paste this into your page (replace your playShasavChord call, or call this in REPL)
-function safePlayShasavChord(chordName, baseFreq = 200, synth = 'sine') {
   const raw = (typeof shasavChordFreqArray === 'function') ? shasavChordFreqArray(chordName, baseFreq) : [];
   // sanitize numbers
   let safe = raw.map((v, i) => {
@@ -211,6 +191,19 @@ function safePlayShasavChord(chordName, baseFreq = 200, synth = 'sine') {
     if (node && typeof node.cutoff === 'function') node.cutoff('2000 2000');
   } catch (e) { /* ignore */ }
   return node;
+  }
+
+  const arg = safe.join(' ');
+  console.log('[shasav][safePlay] freq string ->', arg, 'orig ->', raw);
+  // force sane gain and cutoff patterns to avoid missing/chained-parameter NaNs
+  const node = (typeof freq === 'function') ? freq(arg).s(synth) : null;
+  try {
+    if (node && typeof node.gain === 'function') node.gain('0.8 0.8'); // makes sure gain exists
+  } catch (e) { /* ignore if not supported */ }
+  try {
+    if (node && typeof node.cutoff === 'function') node.cutoff('2000 2000');
+  } catch (e) { /* ignore */ }
+  return node;
 }
 
   // Expose the API under a single namespace to avoid global pollution
@@ -219,7 +212,6 @@ function safePlayShasavChord(chordName, baseFreq = 200, synth = 'sine') {
   G.shasav.shasavChordFreqArray = shasavChordFreqArray;
   G.shasav.shasavChordMidiArray = shasavChordMidiArray;
   G.shasav.playShasavChord = playShasavChord;
-  G.shasav.safePlayShasavChord = safePlayShasavChord
   // convenience top-level aliases too:
   G.shasavFreqValue = shasavFreqValue;
   G.shasavChordFreqArray = shasavChordFreqArray;
